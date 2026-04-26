@@ -1,0 +1,53 @@
+version: '16'
+
+services:
+  minio:
+    image: minio/minio
+    container_name: minio-server
+    ports:
+      - "9000:9000"
+      - "9090:9090"
+    environment:
+      MINIO_ROOT_USER: minioaccesskey
+      MINIO_ROOT_PASSWORD: miniosecretkey
+    volumes:
+      - /Users/kumarrohit/blogging/minio/data:/data
+    command: server /data --console-address ":9090"
+
+  airflow:
+    image: apache/airflow:3.2.0
+    container_name: airflow
+    ports:
+      - "8080:8080"
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    volumes:
+      - ./dags:/opt/airflow/dags
+    command: standalone
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: dbname
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U user -d dbname" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+volumes:
+  postgres_data:
+
+
+
